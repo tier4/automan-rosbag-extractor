@@ -1,7 +1,5 @@
-azure==4.0.0
-pyyaml
 rospkg
 requests
-pypcd
+pypcd==0.1.1
 numpy==1.11.1
-opencv-python
+opencv-python==4.2.0.32
