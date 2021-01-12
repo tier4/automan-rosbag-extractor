@@ -35,6 +35,7 @@ class RosbagExtractor(object):
             topic_msgs[topic] = ""
 
         try:
+            frame_time = []
             count = 0
             with Bag(file_path) as bag:
                 for topic, msg, t in bag.read_messages():
@@ -51,6 +52,11 @@ class RosbagExtractor(object):
                             else:
                                 cls.__process_image(
                                     save_msg, c['msg_type'], output_path, camera_mat, dist_coeff)
+                        frame_time.append({
+                            'frame_number': count,
+                            'secs': t.secs,
+                            'nsecs': t.nsecs,
+                        })
                         for topic in topics:
                             topic_msgs[topic] = ''
 
@@ -64,6 +70,7 @@ class RosbagExtractor(object):
                 'name': name,
                 'original_id': int(raw_data_info['original_id']),
                 'candidates': raw_data_info['candidates'],
+                'frames': frame_time
             }
             return result
         except Exception as e:
@@ -125,6 +132,8 @@ if __name__ == '__main__':
     parser.add_argument('--raw_data_info', required=True)
     args = parser.parse_args()
     automan_info = json.loads(args.automan_info)
+    print('automan_info: ' + args.automan_info)
+    print('storage_info: ' + args.storage_info)
 
     storage_client = StorageClientFactory.create(
         args.storage_type,
@@ -139,4 +148,6 @@ if __name__ == '__main__':
         automan_info, path, [], output_dir, json.loads(args.raw_data_info))
     if args.storage_type == 'AWS_S3':
         storage_client.upload(automan_info)
-    AutomanClient.send_result(automan_info, res)
+    res = AutomanClient.send_result(automan_info, res)
+    print(res)
+
