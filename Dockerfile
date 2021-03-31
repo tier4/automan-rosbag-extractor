@@ -6,12 +6,15 @@ RUN apt update
 RUN apt install -y ros-kinetic-ros-base --allow-unauthenticated
 RUN echo ". /opt/ros/kinetic/setup.bash" >> ~/.bashrc
 
+RUN apt update
 RUN apt install -y \
    wget \
    ros-kinetic-cv-bridge \
+   ros-kinetic-tf \
+   ros-kinetic-tf2-py \
  && apt-get clean \
  && rm -rf /var/lib/apt/lists/*
-RUN cd /tmp && wget https://bootstrap.pypa.io/get-pip.py && python get-pip.py
+RUN cd /tmp && wget https://bootstrap.pypa.io/pip/2.7/get-pip.py && python get-pip.py
 
 ENV WORKDIR /app/
 WORKDIR ${WORKDIR}

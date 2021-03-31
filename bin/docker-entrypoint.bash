@@ -10,4 +10,4 @@ export PKG_CONFIG_PATH=/opt/ros/kinetic/lib/pkgconfig
 export CMAKE_PREFIX_PATH=/opt/ros/kinetic
 export ROS_ETC_DIR=/opt/ros/kinetic/etc/ros
 cd /app
-exec $@
+exec "$@"

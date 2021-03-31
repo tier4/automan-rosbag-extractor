@@ -12,6 +12,12 @@ sys.path.append(os.path.join(os.path.dirname(__file__), '../libs'))
 from core.storage_client_factory import StorageClientFactory
 from core.automan_client import AutomanClient
 
+import rosbag
+import rospy
+import termcolor
+import tf
+import tf2_py
+
 
 class UnknownCalibrationFormatError(Exception):
     pass
@@ -36,7 +42,13 @@ class RosbagExtractor(object):
 
         try:
             count = 0
+            transforms = []
             with Bag(file_path) as bag:
+                tf_buffer = tf2_py.BufferCore(rospy.Duration(3600))
+                for topic, msg, t in bag.read_messages(topics=['/tf']):
+                    for msg_tf in msg.transforms:
+                        tf_buffer.set_transform(msg_tf, "default_authority")
+
                 for topic, msg, t in bag.read_messages():
                     if topic in topics:
                         topic_msgs[topic] = msg
@@ -54,6 +66,21 @@ class RosbagExtractor(object):
                         for topic in topics:
                             topic_msgs[topic] = ''
 
+                transforms = [None for i in range(count)]
+                for topic, msg, t in bag.read_messages(topics=['/concatenated/pointcloud_raw']):
+                    try:
+                        map_to_base_link = tf_buffer.lookup_transform_core("map", msg.header.frame_id, msg.header.stamp)
+                        if map_to_base_link.transform.translation.x == 0.0 and map_to_base_link.transform.translation.y == 0.0 and map_to_base_link.transform.translation.z == 0.0:
+                            map_to_base_link = None
+                    except (tf2_py.LookupException, tf2_py.ConnectivityException, tf2_py.ExtrapolationException):
+                        map_to_base_link = None
+                    if map_to_base_link is not None:
+                        seq_num = msg.header.seq
+                        transforms[seq_num] = cls.__transform_to_dict(seq_num, map_to_base_link.transform)
+                transforms_output_path = output_dir + 'transforms.json'
+                with open(transforms_output_path, 'w') as f:
+                    f.write(json.dumps(transforms))
+
             name = os.path.basename(path)
             if 'name' in raw_data_info and len(raw_data_info['name']) > 0:
                 name = raw_data_info['name']
@@ -69,6 +96,20 @@ class RosbagExtractor(object):
         except Exception as e:
             print(e)
             raise(e)
+
+    @staticmethod
+    def __transform_to_dict(seq_num, transform):
+        dict_translation = {"x": transform.translation.x, "y": transform.translation.y, "z": transform.translation.z}
+        dict_rotation = {"x": transform.rotation.x, "y": transform.rotation.y, "z": transform.rotation.z, "w": transform.rotation.w}
+        rotation_euler = tf.transformations.euler_from_quaternion((transform.rotation.x, transform.rotation.y, transform.rotation.z, transform.rotation.w))
+        dict_rotation_euler = {"roll": rotation_euler[0], "pitch": rotation_euler[1], "yaw": rotation_euler[2]}
+        dict_transform = {
+            "seq_num": seq_num,
+            "translation": dict_translation,
+            "rotation": dict_rotation,
+            "rotation_euler": dict_rotation_euler
+        }
+        return dict_transform
 
     @staticmethod
     def __get_candidates(automan_info, project_id, original_id, selected_topics):
