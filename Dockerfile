@@ -11,7 +11,7 @@ RUN apt install -y \
    ros-kinetic-cv-bridge \
  && apt-get clean \
  && rm -rf /var/lib/apt/lists/*
-RUN cd /tmp && wget https://bootstrap.pypa.io/get-pip.py && python get-pip.py
+RUN cd /tmp && wget https://bootstrap.pypa.io/pip/2.7/get-pip.py && python get-pip.py
 
 ENV WORKDIR /app/
 WORKDIR ${WORKDIR}
